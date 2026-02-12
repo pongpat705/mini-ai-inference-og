@@ -1,0 +1,5 @@
+com/example/ai/MainVerticle.class
+com/example/ai/LinearLayer.class
+com/example/ai/ActivationFunction.class
+com/example/ai/verticles/InferenceVerticle.class
+com/example/ai/verticles/PreProcessingVerticle.class

@@ -1,0 +1,5 @@
+/app/src/main/java/com/example/ai/MainVerticle.java
+/app/src/main/java/com/example/ai/LinearLayer.java
+/app/src/main/java/com/example/ai/verticles/InferenceVerticle.java
+/app/src/main/java/com/example/ai/verticles/PreProcessingVerticle.java
+/app/src/main/java/com/example/ai/ActivationFunction.java
