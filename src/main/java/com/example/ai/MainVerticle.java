@@ -7,6 +7,7 @@ import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
+import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.handler.BodyHandler;
 
@@ -14,19 +15,21 @@ public class MainVerticle extends AbstractVerticle {
 
     @Override
     public void start(Promise<Void> startPromise) {
-        // Deploy PreProcessingVerticle
-        vertx.deployVerticle(() -> new PreProcessingVerticle(1024), new DeploymentOptions().setInstances(1))
+        // Deploy PreProcessingVerticle (Embedding Dim = 64)
+        vertx.deployVerticle(() -> new PreProcessingVerticle(64), new DeploymentOptions().setInstances(1))
              .onFailure(Throwable::printStackTrace);
 
         // Deploy InferenceVerticle (Multiple Instances)
+        // Input Dim = 64 (Dense Embedding), Output Dim = 128
         int cores = Math.max(1, Runtime.getRuntime().availableProcessors());
-        vertx.deployVerticle(() -> new InferenceVerticle(1024, 128), new DeploymentOptions().setInstances(cores))
+        vertx.deployVerticle(() -> new InferenceVerticle(64, 128), new DeploymentOptions().setInstances(cores))
              .onFailure(Throwable::printStackTrace);
 
         // HTTP Server
         Router router = Router.router(vertx);
         router.route().handler(BodyHandler.create());
 
+        // 1. Inference Endpoint
         router.post("/infer").handler(ctx -> {
             String text = ctx.body().asString();
             if (text == null) text = "";
@@ -52,6 +55,28 @@ public class MainVerticle extends AbstractVerticle {
                 })
                 .onFailure(err -> {
                     ctx.response().setStatusCode(500).end(err.getMessage());
+                });
+        });
+
+        // 2. Training/Control Endpoint
+        router.post("/train").handler(ctx -> {
+            JsonObject body = ctx.body().asJsonObject();
+            if (body == null) {
+                ctx.response().setStatusCode(400).end("Missing JSON body");
+                return;
+            }
+
+            vertx.eventBus().request(PreProcessingVerticle.ADDRESS_CONTROL, body)
+                .onSuccess(reply -> {
+                    ctx.response()
+                       .putHeader("content-type", "application/json")
+                       .end(reply.body().toString());
+                })
+                .onFailure(err -> {
+                    int code = 500;
+                    if (err.getMessage().contains("400")) code = 400;
+                    if (err.getMessage().contains("404")) code = 404;
+                    ctx.response().setStatusCode(code).end(err.getMessage());
                 });
         });
 

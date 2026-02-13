@@ -45,6 +45,13 @@
             <artifactId>vertx-hazelcast</artifactId>
         </dependency>
 
+        <!-- JSON Handling -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>2.16.1</version>
+        </dependency>
+
         <!-- JMH -->
         <dependency>
             <groupId>org.openjdk.jmh</groupId>
