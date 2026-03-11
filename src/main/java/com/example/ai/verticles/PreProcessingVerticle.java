@@ -102,7 +102,7 @@ public class PreProcessingVerticle extends AbstractVerticle {
 
                         if (vecs.size() >= 2) {
                             // Run pull multiple times for faster convergence during training
-                            for (int iter = 0; iter < 5; iter++) {
+                            for (int iter = 0; iter < 100; iter++) {
                                 pullMultipleVectors(vecs, r);
                             }
                             message.reply(new JsonObject().put("status", "pulled").put("words", new JsonArray(foundWords)));

@@ -38,8 +38,8 @@ public class SemanticSelectionTest {
 
         // 1. Training - Pull groups together
         // Increased iterations for much better separation
-        String fruitsBatch = "pull 0.5 apple banana orange\n".repeat(50);
-        String techBatch = "pull 0.5 code laptop cloud\n".repeat(50);
+        String fruitsBatch = "pull 0.8 apple banana orange\n".repeat(100);
+        String techBatch = "pull 0.8 code laptop cloud\n".repeat(100);
         String combinedBatch = fruitsBatch + techBatch;
 
         System.out.println("[DEBUG_LOG] 1. Training 2 groups (FRUIT vs TECH)...");
