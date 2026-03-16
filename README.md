@@ -154,6 +154,25 @@ To verify if training is working correctly:
 2.  **Expected Outcome**: If you use the `pull` type, the similarity between the target words should increase (approach 1.0).
 3.  **Automated Assertion**: The `BatchTrainingAssertionTest.java` demonstrates this by picking a case from `training_data.txt`, measuring initial similarity, sending the batch data, and then confirming the similarity has increased.
 
+### 6. Real-World Application: Semantic Search (Indexing) Test
+This test demonstrates how to use the system for indexing documents and performing similarity-based retrieval (Semantic Search).
+
+**The Workflow:**
+1.  **Extract & Train**: Words from multiple files are used to "pull" semantic groups together.
+2.  **Indexing**: Each file is passed through `/infer` to generate a high-dimensional "Document Vector" (Fingerprint).
+3.  **Dictionary storage**: These fingerprints are stored in a local Map (Semantic Index).
+4.  **Querying**: A user query (e.g., "i want to eat some apple") is vectorized via `/infer`.
+5.  **Matching**: The query vector is compared against all document vectors using **Cosine Similarity**.
+6.  **Retrieval**: Files with the highest similarity (e.g., `fruit_info.txt`) are returned to the frontend.
+
+```bash
+java --enable-preview --add-modules jdk.incubator.vector \
+     -cp target/classes:target/test-classes:$(mvn dependency:build-classpath -Dmdep.outputFile=/dev/stdout -q) \
+     com.example.ai.RealWorldSemanticSearchTest
+```
+
+This test simulates indexing three files (`fruit_info.txt`, `tech_news.txt`, `weather.txt`) and correctly identifies the relevant document for a semantic query.
+
 ---
 
 ## Project Structure
@@ -170,6 +189,8 @@ src/
     ├── EmbeddingTrainingTest.java # Verification of Training Channel
     ├── WordSimilarityTest.java    # Quantitative Similarity Verification
     ├── MultiWordTrainingTest.java # Verification of multi-word and batch training
+    ├── RealWorldSemanticSearchTest.java # Demo of real-world indexing and search
+    ├── SemanticSelectionTest.java # Demo of word-level classification
     ├── LoadTest.java             # System Load Test (Vert.x WebClient)
     └── benchmark/
         └── VectorBenchmark.java  # JMH Microbenchmark
