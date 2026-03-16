@@ -7,22 +7,26 @@ import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.handler.BodyHandler;
 
 public class MainVerticle extends AbstractVerticle {
 
+    public static final int EMBEDDING_DIM = 128;
+    public static final int OUTPUT_DIM = 256;
+
     @Override
     public void start(Promise<Void> startPromise) {
-        // Deploy PreProcessingVerticle (Embedding Dim = 64)
-        vertx.deployVerticle(() -> new PreProcessingVerticle(64), new DeploymentOptions().setInstances(1))
+        // Deploy PreProcessingVerticle
+        vertx.deployVerticle(() -> new PreProcessingVerticle(EMBEDDING_DIM), new DeploymentOptions().setInstances(1))
              .onFailure(Throwable::printStackTrace);
 
         // Deploy InferenceVerticle (Multiple Instances)
-        // Input Dim = 64 (Dense Embedding), Output Dim = 128
+        // Input Dim = EMBEDDING_DIM, Output Dim = OUTPUT_DIM
         int cores = Math.max(1, Runtime.getRuntime().availableProcessors());
-        vertx.deployVerticle(() -> new InferenceVerticle(64, 128), new DeploymentOptions().setInstances(cores))
+        vertx.deployVerticle(() -> new InferenceVerticle(EMBEDDING_DIM, OUTPUT_DIM), new DeploymentOptions().setInstances(cores))
              .onFailure(Throwable::printStackTrace);
 
         // HTTP Server
@@ -39,19 +43,15 @@ public class MainVerticle extends AbstractVerticle {
                 .onSuccess(reply -> {
                     io.vertx.core.buffer.Buffer res = (io.vertx.core.buffer.Buffer) reply.body();
 
-                    StringBuilder sb = new StringBuilder("[");
+                    JsonArray jsonArray = new JsonArray();
                     int len = res.length() / 4;
-                    int show = Math.min(len, 10);
-                    for(int i=0; i<show; i++) {
-                        sb.append(res.getFloat(i*4));
-                        if(i < show-1) sb.append(", ");
+                    for (int i = 0; i < len; i++) {
+                        jsonArray.add(res.getFloat(i * 4));
                     }
-                    if(len > show) sb.append(", ...");
-                    sb.append("]");
 
                     var resp = ctx.response();
                     resp.putHeader("content-type", "application/json");
-                    resp.end(sb.toString());
+                    resp.end(jsonArray.encode());
                 })
                 .onFailure(err -> {
                     ctx.response().setStatusCode(500).end(err.getMessage());
@@ -60,10 +60,22 @@ public class MainVerticle extends AbstractVerticle {
 
         // 2. Training/Control Endpoint
         router.post("/train").handler(ctx -> {
-            JsonObject body = ctx.body().asJsonObject();
+            JsonObject body = null;
+            try {
+                body = ctx.body().asJsonObject();
+            } catch (Exception e) {
+                // Not a JSON
+            }
+
             if (body == null) {
-                ctx.response().setStatusCode(400).end("Missing JSON body");
-                return;
+                String text = ctx.body().asString();
+                if (text != null && !text.isEmpty()) {
+                    // Try to treat as batch training text if not JSON
+                    body = new JsonObject().put("type", "batch").put("data", text);
+                } else {
+                    ctx.response().setStatusCode(400).end("Missing body");
+                    return;
+                }
             }
 
             vertx.eventBus().request(PreProcessingVerticle.ADDRESS_CONTROL, body)
